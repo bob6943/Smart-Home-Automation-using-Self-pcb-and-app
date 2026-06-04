@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0D1117">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add New Project"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#FFD700"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Blynk token aur WiFi details daalo"
+            android:textSize="13sp"
+            android:textColor="#8B949E"
+            android:layout_marginBottom="32dp"/>
+
+        <!-- Project Name -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Project Name"
+            android:textColor="#8B949E"
+            android:textSize="12sp"
+            android:layout_marginBottom="6dp"/>
+        <EditText
+            android:id="@+id/etProjectName"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:hint="e.g. Ghar - Living Room"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#444455"
+            android:background="@drawable/card_bg"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:inputType="text"
+            android:layout_marginBottom="20dp"/>
+
+        <!-- Blynk Token -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Blynk Auth Token"
+            android:textColor="#8B949E"
+            android:textSize="12sp"
+            android:layout_marginBottom="6dp"/>
+        <EditText
+            android:id="@+id/etToken"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:hint="Paste karo Blynk token yahan"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#444455"
+            android:background="@drawable/card_bg"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:inputType="text"
+            android:layout_marginBottom="6dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="💡 Token: Blynk app → Device → Auth Token"
+            android:textSize="11sp"
+            android:textColor="#3A6A90"
+            android:layout_marginBottom="24dp"/>
+
+        <!-- WiFi SSID -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="WiFi Network Name (SSID)"
+            android:textColor="#8B949E"
+            android:textSize="12sp"
+            android:layout_marginBottom="6dp"/>
+        <EditText
+            android:id="@+id/etSSID"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:hint="e.g. MyWiFi"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#444455"
+            android:background="@drawable/card_bg"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:inputType="text"
+            android:layout_marginBottom="20dp"/>
+
+        <!-- WiFi Password -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="WiFi Password"
+            android:textColor="#8B949E"
+            android:textSize="12sp"
+            android:layout_marginBottom="6dp"/>
+        <EditText
+            android:id="@+id/etWifiPass"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:hint="WiFi password daalo"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#444455"
+            android:background="@drawable/card_bg"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:inputType="textPassword"
+            android:layout_marginBottom="6dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📶 Yahi WiFi ESP32 use karega"
+            android:textSize="11sp"
+            android:textColor="#3A6A90"
+            android:layout_marginBottom="32dp"/>
+
+        <Button
+            android:id="@+id/btnSaveProject"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="SAVE PROJECT"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:backgroundTint="#FFD700"
+            android:textColor="#0D1117"/>
+        <Button
+            android:id="@+id/btnSendToESP"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="📶 Save &amp; Send to ESP32"
+            android:textSize="13sp"
+            android:backgroundTint="#1A3A1A"
+            android:textColor="#4CAF50"
+            android:layout_marginTop="10dp"/>
+        <TextView
+            android:id="@+id/tvAddError"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="#FF4444"
+            android:layout_marginTop="10dp"
+            android:textSize="13sp"/>
+
+    </LinearLayout>
+</ScrollView>

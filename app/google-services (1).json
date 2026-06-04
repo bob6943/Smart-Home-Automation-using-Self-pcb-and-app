@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "935165853911",
+    "project_id": "smartbulb-2153f",
+    "storage_bucket": "smartbulb-2153f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:935165853911:android:d8ad016611a8a8da1f3092",
+        "android_client_info": {
+          "package_name": "com.samadroid.smartbulb"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "935165853911-5n13dimolv3ms872hnfkfijsd6236qil.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGM0PwlrGgbI9DLgu0J0Qn3qrakVHcbW8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "935165853911-5n13dimolv3ms872hnfkfijsd6236qil.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#0D1117"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/tvScheduleTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Schedule"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#FFD700"
+        android:layout_marginBottom="6dp"/>
+
+    <TextView
+        android:id="@+id/tvScheduleSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Auto ON/OFF time set karo"
+        android:textSize="13sp"
+        android:textColor="#8B949E"
+        android:layout_marginBottom="32dp"/>
+
+    <!-- Enable toggle -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="28dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Schedule Enable karo"
+            android:textColor="#C9D1D9"
+            android:textSize="15sp"/>
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchEnable"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+    <!-- ON Time -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ON Time"
+        android:textColor="#8B949E"
+        android:textSize="12sp"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnOnTime"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Time select karo"
+        android:textSize="15sp"
+        android:backgroundTint="#161B22"
+        android:textColor="#4CAF50"
+        android:layout_marginBottom="24dp"/>
+
+    <!-- OFF Time -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="OFF Time"
+        android:textColor="#8B949E"
+        android:textSize="12sp"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnOffTime"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Time select karo"
+        android:textSize="15sp"
+        android:backgroundTint="#161B22"
+        android:textColor="#FF5555"
+        android:layout_marginBottom="40dp"/>
+
+    <Button
+        android:id="@+id/btnSaveSchedule"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="SAVE SCHEDULE"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:backgroundTint="#FFD700"
+        android:textColor="#0D1117"/>
+
+</LinearLayout>

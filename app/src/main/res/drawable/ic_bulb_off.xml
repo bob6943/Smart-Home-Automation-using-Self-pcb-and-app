@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+
+    <!-- Bulb glass -->
+    <path
+        android:pathData="M32,6 C20,6 12,14 12,25 C12,33 17,39 24,43 L24,50 L40,50 L40,43 C47,39 52,33 52,25 C52,14 44,6 32,6 Z"
+        android:fillColor="#AAAAAA"/>
+
+    <!-- Shine -->
+    <path
+        android:pathData="M20,16 C20,16 18,22 20,26"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"/>
+
+    <!-- Base 1 -->
+    <path
+        android:pathData="M24,50 L40,50 L40,53 L24,53 Z"
+        android:fillColor="#888888"/>
+
+    <!-- Base 2 -->
+    <path
+        android:pathData="M25,54 L39,54 L39,57 L25,57 Z"
+        android:fillColor="#888888"/>
+
+    <!-- Base 3 -->
+    <path
+        android:pathData="M26,58 L38,58 L38,61 L26,61 Z"
+        android:fillColor="#777777"/>
+
+</vector>

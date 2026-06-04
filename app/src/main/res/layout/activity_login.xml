@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    android:background="#0D1117">
+
+    <ImageView
+        android:layout_width="110dp"
+        android:layout_height="110dp"
+        android:src="@mipmap/ic_launcher"
+        android:layout_marginBottom="10dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="SmartBulb"
+        android:textSize="34sp"
+        android:textStyle="bold"
+        android:textColor="#FFD700"
+        android:layout_marginBottom="40dp"/>
+
+    <EditText
+        android:id="@+id/etUsername"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:hint="Email"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#555566"
+        android:background="@drawable/card_bg"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:inputType="textEmailAddress"
+        android:layout_marginBottom="14dp"/>
+
+    <EditText
+        android:id="@+id/etPassword"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:hint="Password"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#555566"
+        android:background="@drawable/card_bg"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:inputType="textPassword"
+        android:layout_marginBottom="10dp"/>
+
+    <!-- 🔥 FORGOT PASSWORD -->
+    <TextView
+        android:id="@+id/tvForgotPassword"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Forgot Password?"
+        android:textColor="#FFD700"
+        android:textSize="13sp"
+        android:layout_marginBottom="20dp"
+        android:clickable="true"
+        android:focusable="true"/>
+
+    <Button
+        android:id="@+id/btnLogin"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="LOGIN"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:backgroundTint="#FFD700"
+        android:textColor="#0D1117"
+        android:elevation="4dp"/>
+
+    <TextView
+        android:id="@+id/tvSignup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Don't have an account? Sign Up"
+        android:textColor="#FFD700"
+        android:textSize="13sp"
+        android:layout_marginTop="15dp"
+        android:clickable="true"
+        android:focusable="true"/>
+
+    <!-- 🔥 GOOGLE SIGN-IN BUTTON -->
+    <LinearLayout
+        android:id="@+id/btnGoogleSignIn"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="15dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:background="@drawable/card_bg"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_google"
+            android:layout_marginEnd="10dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sign in with Google"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"/>
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:visibility="gone"
+        android:layout_marginTop="15dp"/>
+
+    <TextView
+        android:id="@+id/tvError"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="#FF4444"
+        android:layout_marginTop="12dp"
+        android:textSize="13sp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="This app is for educational use only. Use IoT hardware safely."
+        android:textColor="#888888"
+        android:textSize="11sp"
+        android:gravity="center"
+        android:layout_marginTop="20dp"/>
+
+</LinearLayout>

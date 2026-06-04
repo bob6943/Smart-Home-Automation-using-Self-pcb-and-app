@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    android:background="#0D1117">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Create Account"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="#FFD700"
+        android:layout_marginBottom="30dp"/>
+
+    <EditText
+        android:id="@+id/etEmail"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:hint="Email"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#555566"
+        android:inputType="textEmailAddress"
+        android:background="@drawable/card_bg"
+        android:padding="16dp"
+        android:layout_marginBottom="14dp"/>
+
+    <EditText
+        android:id="@+id/etPassword"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:hint="Password"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#555566"
+        android:inputType="textPassword"
+        android:background="@drawable/card_bg"
+        android:padding="16dp"
+        android:layout_marginBottom="14dp"/>
+
+    <EditText
+        android:id="@+id/etUsername"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:hint="Username (Optional)"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#555566"
+        android:inputType="textPersonName"
+        android:background="@drawable/card_bg"
+        android:padding="16dp"
+        android:layout_marginBottom="25dp"/>
+
+    <Button
+        android:id="@+id/btnSignup"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="SIGN UP"
+        android:textStyle="bold"
+        android:backgroundTint="#FFD700"
+        android:textColor="#0D1117"/>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:visibility="gone"
+        android:layout_marginTop="15dp"/>
+
+    <TextView
+        android:id="@+id/tvError"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="#FF4444"
+        android:layout_marginTop="10dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="This app is for educational use only. Use IoT hardware safely."
+        android:textColor="#888888"
+        android:textSize="11sp"
+        android:gravity="center"
+        android:layout_marginTop="20dp"/>
+</LinearLayout>

@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0E0E10">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="18dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="SMART BULB — 4 CHANNEL"
+            android:textColor="#AAAAAA"
+            android:textSize="13sp"
+            android:letterSpacing="0.2"
+            android:gravity="center"
+            android:layout_marginBottom="14dp" />
+
+        <!-- All ON / All OFF buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <Button
+                android:id="@+id/btnAllOn"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="ALL ON"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:backgroundTint="#1A2A1A"
+                android:textColor="#4CAF50"/>
+
+            <Button
+                android:id="@+id/btnAllOff"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:text="ALL OFF"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:backgroundTint="#2A1A1A"
+                android:textColor="#FF5555"/>
+
+        </LinearLayout>
+
+        <!-- Row 1 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="14dp">
+
+            <!-- CH1 -->
+            <LinearLayout
+                android:id="@+id/cardCh1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="16dp"
+                android:layout_marginEnd="7dp"
+                android:background="@drawable/bg_ch1_off"
+                android:clickable="true"
+                android:focusable="true">
+
+                <FrameLayout
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:layout_marginBottom="10dp">
+
+                    <ImageView
+                        android:id="@+id/raysCh1"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_rays"
+                        android:alpha="0"/>
+
+                    <ImageView
+                        android:id="@+id/bulbCh1"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_bulb_off"/>
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CH 1"
+                    android:textColor="#555555"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.15" />
+
+                <TextView
+                    android:id="@+id/nameCh1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Living Room"
+                    android:textColor="#444444"
+                    android:textSize="11sp"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+                <TextView
+                    android:id="@+id/statusCh1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="○ OFF"
+                    android:textColor="#333333"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="4dp" />
+
+                <!-- Schedule button -->
+                <TextView
+                    android:id="@+id/scheduleCh1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⏰"
+                    android:textSize="14sp"
+                    android:layout_marginTop="6dp"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+            </LinearLayout>
+
+            <!-- CH2 -->
+            <LinearLayout
+                android:id="@+id/cardCh2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="16dp"
+                android:layout_marginStart="7dp"
+                android:background="@drawable/bg_ch2_off"
+                android:clickable="true"
+                android:focusable="true">
+
+                <FrameLayout
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:layout_marginBottom="10dp">
+
+                    <ImageView
+                        android:id="@+id/raysCh2"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_rays"
+                        android:alpha="0"/>
+
+                    <ImageView
+                        android:id="@+id/bulbCh2"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_bulb_off"/>
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CH 2"
+                    android:textColor="#555555"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.15" />
+
+                <TextView
+                    android:id="@+id/nameCh2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Bedroom"
+                    android:textColor="#444444"
+                    android:textSize="11sp"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+                <TextView
+                    android:id="@+id/statusCh2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="○ OFF"
+                    android:textColor="#333333"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:id="@+id/scheduleCh2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⏰"
+                    android:textSize="14sp"
+                    android:layout_marginTop="6dp"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Row 2 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- CH3 -->
+            <LinearLayout
+                android:id="@+id/cardCh3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="16dp"
+                android:layout_marginEnd="7dp"
+                android:background="@drawable/bg_ch3_off"
+                android:clickable="true"
+                android:focusable="true">
+
+                <FrameLayout
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:layout_marginBottom="10dp">
+
+                    <ImageView
+                        android:id="@+id/raysCh3"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_rays"
+                        android:alpha="0"/>
+
+                    <ImageView
+                        android:id="@+id/bulbCh3"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_bulb_off"/>
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CH 3"
+                    android:textColor="#555555"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.15" />
+
+                <TextView
+                    android:id="@+id/nameCh3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Kitchen"
+                    android:textColor="#444444"
+                    android:textSize="11sp"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+                <TextView
+                    android:id="@+id/statusCh3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="○ OFF"
+                    android:textColor="#333333"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:id="@+id/scheduleCh3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⏰"
+                    android:textSize="14sp"
+                    android:layout_marginTop="6dp"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+            </LinearLayout>
+
+            <!-- CH4 -->
+            <LinearLayout
+                android:id="@+id/cardCh4"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="16dp"
+                android:layout_marginStart="7dp"
+                android:background="@drawable/bg_ch4_off"
+                android:clickable="true"
+                android:focusable="true">
+
+                <FrameLayout
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:layout_marginBottom="10dp">
+
+                    <ImageView
+                        android:id="@+id/raysCh4"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_rays"
+                        android:alpha="0"/>
+
+                    <ImageView
+                        android:id="@+id/bulbCh4"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_bulb_off"/>
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CH 4"
+                    android:textColor="#555555"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.15" />
+
+                <TextView
+                    android:id="@+id/nameCh4"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Study"
+                    android:textColor="#444444"
+                    android:textSize="11sp"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+                <TextView
+                    android:id="@+id/statusCh4"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="○ OFF"
+                    android:textColor="#333333"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:id="@+id/scheduleCh4"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⏰"
+                    android:textSize="14sp"
+                    android:layout_marginTop="6dp"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+            </LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>
