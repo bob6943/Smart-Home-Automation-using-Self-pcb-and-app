@@ -28,6 +28,9 @@ public class MainActivity extends AppCompatActivity {
 
     boolean[] state = {false, false, false, false};
 
+    // ✅ Network mode — true = Local WiFi, false = Remote (Blynk)
+    boolean isLocalMode = true;
+
     int[] cards       = {R.id.cardCh1,     R.id.cardCh2,     R.id.cardCh3,     R.id.cardCh4};
     int[] bulbs       = {R.id.bulbCh1,     R.id.bulbCh2,     R.id.bulbCh3,     R.id.bulbCh4};
     int[] rays        = {R.id.raysCh1,     R.id.raysCh2,     R.id.raysCh3,     R.id.raysCh4};
@@ -50,9 +53,16 @@ public class MainActivity extends AppCompatActivity {
     private String projectKey = "";
     private String localEspIp = null;
 
-    private OkHttpClient httpClient;
+    private OkHttpClient localClient;
+    private OkHttpClient blynkClient;
+
     private SharedPreferences prefs;
     private Handler scheduleHandler = new Handler();
+
+    // ✅ Toggle button views
+    private TextView tvModeLocal;
+    private TextView tvModeRemote;
+    private android.view.View modeIndicator;
 
     String ssid, wifipass;
 
@@ -61,10 +71,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        httpClient = new OkHttpClient.Builder()
-                .connectTimeout(4, TimeUnit.SECONDS)
-                .readTimeout(4, TimeUnit.SECONDS)
-                .retryOnConnectionFailure(true)
+        localClient = new OkHttpClient.Builder()
+                .connectTimeout(800, TimeUnit.MILLISECONDS)
+                .readTimeout(800, TimeUnit.MILLISECONDS)
+                .retryOnConnectionFailure(false)
+                .build();
+
+        blynkClient = new OkHttpClient.Builder()
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(5, TimeUnit.SECONDS)
+                .retryOnConnectionFailure(false)
                 .build();
 
         prefs = getSharedPreferences("SBPrefs", MODE_PRIVATE);
@@ -87,7 +103,11 @@ public class MainActivity extends AppCompatActivity {
                 Color.parseColor("#B06DFF")
         };
 
+        // ✅ Mode toggle saved state restore karo
+        isLocalMode = prefs.getBoolean(projectKey + "_local_mode", true);
+
         loadChannelNames();
+        setupModeToggle();
 
         for (int i = 0; i < 4; i++) {
             final int index = i;
@@ -107,10 +127,49 @@ public class MainActivity extends AppCompatActivity {
         android.view.View btnLogout = findViewById(R.id.btnLogout);
         if (btnLogout != null) btnLogout.setOnClickListener(v -> logout());
 
-        // ✅ Location permission check — ESP scan ke liye zaruri
         checkLocationPermissionAndScan();
-
         startScheduleChecker();
+    }
+
+    // ── Mode Toggle ───────────────────────────────────────────
+
+    void setupModeToggle() {
+        tvModeLocal  = findViewById(R.id.tvModeLocal);
+        tvModeRemote = findViewById(R.id.tvModeRemote);
+
+        updateModeUI();
+
+        tvModeLocal.setOnClickListener(v -> {
+            isLocalMode = true;
+            prefs.edit().putBoolean(projectKey + "_local_mode", true).apply();
+            updateModeUI();
+            Toast.makeText(this, "🏠 Local WiFi mode", Toast.LENGTH_SHORT).show();
+        });
+
+        tvModeRemote.setOnClickListener(v -> {
+            isLocalMode = false;
+            prefs.edit().putBoolean(projectKey + "_local_mode", false).apply();
+            updateModeUI();
+            Toast.makeText(this, "🌐 Remote (Blynk) mode", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    void updateModeUI() {
+        if (tvModeLocal == null || tvModeRemote == null) return;
+
+        if (isLocalMode) {
+            // Local selected
+            tvModeLocal.setBackgroundResource(R.drawable.bg_mode_selected);
+            tvModeLocal.setTextColor(Color.parseColor("#0E0E10"));
+            tvModeRemote.setBackgroundResource(R.drawable.bg_mode_unselected);
+            tvModeRemote.setTextColor(Color.parseColor("#888888"));
+        } else {
+            // Remote selected
+            tvModeRemote.setBackgroundResource(R.drawable.bg_mode_selected);
+            tvModeRemote.setTextColor(Color.parseColor("#0E0E10"));
+            tvModeLocal.setBackgroundResource(R.drawable.bg_mode_unselected);
+            tvModeLocal.setTextColor(Color.parseColor("#888888"));
+        }
     }
 
     // ── Permission ────────────────────────────────────────────
@@ -119,10 +178,8 @@ public class MainActivity extends AppCompatActivity {
         if (ContextCompat.checkSelfPermission(this,
                 android.Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
-            // Permission hai — seedha scan karo
             initEspConnection();
         } else {
-            // Permission nahi — maango
             ActivityCompat.requestPermissions(this,
                     new String[]{
                             android.Manifest.permission.ACCESS_FINE_LOCATION,
@@ -139,10 +196,8 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == LOCATION_REQ) {
             if (grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission mili — scan karo
                 initEspConnection();
             } else {
-                // Permission nahi mili — Blynk only mode
                 Toast.makeText(this,
                         "⚠️ Location permission nahi — Sirf Blynk mode",
                         Toast.LENGTH_LONG).show();
@@ -153,8 +208,8 @@ public class MainActivity extends AppCompatActivity {
     void initEspConnection() {
         localEspIp = "192.168.0.100";
         prefs.edit().putString(projectKey + "_esp_ip", "192.168.0.100").apply();
-
     }
+
     // ── ESP Discovery ──────────────────────────────────────────
 
     void scanForEsp() {
@@ -173,8 +228,8 @@ public class MainActivity extends AppCompatActivity {
 
     void verifyOrRescan(String savedIp) {
         String url = "http://" + savedIp + "/ping";
-        asyncRequest(url, new RequestCallback() {
-            @Override public void onSuccess() { /* IP sahi hai */ }
+        asyncRequest(url, localClient, new RequestCallback() {
+            @Override public void onSuccess() { }
             @Override public void onFailure() {
                 runOnUiThread(() -> {
                     localEspIp = null;
@@ -290,39 +345,50 @@ public class MainActivity extends AppCompatActivity {
     // ── Network ───────────────────────────────────────────────
 
     void sendRequest(int pin, int value, int channelIndex) {
-        if (authToken.isEmpty()) {
-            Toast.makeText(this, "Auth Token missing!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (localEspIp != null) {
-            String localUrl = "http://" + localEspIp + "/relay?pin=" + pin + "&value=" + value;
-            asyncRequest(localUrl, new RequestCallback() {
-                @Override public void onSuccess() { }
-                @Override public void onFailure() {
-                    runOnUiThread(() -> {
-                        localEspIp = null;
-                        prefs.edit().remove(projectKey + "_esp_ip").apply();
-                        scanForEsp();
-                    });
-                    tryBlynk(pin, value, channelIndex);
-                }
-            });
+        if (isLocalMode) {
+            // ✅ Local WiFi mode — seedha ESP32 pe
+            if (localEspIp != null) {
+                String localUrl = "http://" + localEspIp + "/relay?pin=" + pin + "&value=" + value;
+                asyncRequest(localUrl, localClient, new RequestCallback() {
+                    @Override public void onSuccess() { }
+                    @Override public void onFailure() {
+                        runOnUiThread(() -> {
+                            state[channelIndex] = !state[channelIndex];
+                            updateUI(channelIndex);
+                            Toast.makeText(MainActivity.this,
+                                    "❌ ESP nahi mila — Local WiFi check karo",
+                                    Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                });
+            } else {
+                state[channelIndex] = !state[channelIndex];
+                updateUI(channelIndex);
+                Toast.makeText(this, "❌ ESP IP set nahi hai", Toast.LENGTH_SHORT).show();
+            }
         } else {
-            tryBlynk(pin, value, channelIndex);
+            // ✅ Remote mode — seedha Blynk pe, no local try
+            if (!authToken.isEmpty()) {
+                tryBlynk(pin, value, channelIndex);
+            } else {
+                state[channelIndex] = !state[channelIndex];
+                updateUI(channelIndex);
+                Toast.makeText(this, "❌ Auth Token missing!", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
     void tryBlynk(int pin, int value, int channelIndex) {
-        String blynkUrl = BLYNK_URL + authToken + "&v" + pin + "=" + value;
-        asyncRequest(blynkUrl, new RequestCallback() {
+        int blynkPin = pin - 1; // ✅ CH1→V0, CH2→V1, CH3→V2, CH4→V3
+        String blynkUrl = BLYNK_URL + authToken + "&v" + blynkPin + "=" + value;
+        asyncRequest(blynkUrl, blynkClient, new RequestCallback() {
             @Override public void onSuccess() { }
             @Override public void onFailure() {
                 runOnUiThread(() -> {
                     state[channelIndex] = !state[channelIndex];
                     updateUI(channelIndex);
                     Toast.makeText(MainActivity.this,
-                            "❌ No internet & ESP nahi mila", Toast.LENGTH_SHORT).show();
+                            "❌ Blynk fail — internet check karo", Toast.LENGTH_SHORT).show();
                 });
             }
         });
@@ -335,9 +401,9 @@ public class MainActivity extends AppCompatActivity {
         void onFailure();
     }
 
-    void asyncRequest(String url, RequestCallback callback) {
+    void asyncRequest(String url, OkHttpClient client, RequestCallback callback) {
         Request request = new Request.Builder().url(url).get().build();
-        httpClient.newCall(request).enqueue(new Callback() {
+        client.newCall(request).enqueue(new Callback() {
             @Override public void onResponse(Call call, Response response) throws IOException {
                 if (response.isSuccessful()) callback.onSuccess();
                 else callback.onFailure();

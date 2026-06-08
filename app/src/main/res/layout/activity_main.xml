@@ -18,7 +18,42 @@
             android:textSize="13sp"
             android:letterSpacing="0.2"
             android:gravity="center"
-            android:layout_marginBottom="14dp" />
+            android:layout_marginBottom="25dp" />
+
+        <!-- ✅ Mode Toggle — Local / Remote -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:orientation="horizontal"
+            android:background="#1A1A1A"
+            android:padding="4dp"
+            android:layout_marginBottom="14dp">
+
+            <TextView
+                android:id="@+id/tvModeLocal"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text=" Local wifi"
+                android:gravity="center"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#0E0E10"
+                android:background="@drawable/bg_mode_selected"/>
+
+            <TextView
+                android:id="@+id/tvModeRemote"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text=" Remote"
+                android:gravity="center"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#888888"
+                android:background="@drawable/bg_mode_unselected"/>
+
+        </LinearLayout>
 
         <!-- All ON / All OFF buttons -->
         <LinearLayout
@@ -36,6 +71,7 @@
                 android:text="ALL ON"
                 android:textSize="12sp"
                 android:textStyle="bold"
+                android:layout_marginBottom="25dp" />
                 android:backgroundTint="#1A2A1A"
                 android:textColor="#4CAF50"/>
 
@@ -124,13 +160,12 @@
                     android:textStyle="bold"
                     android:layout_marginTop="4dp" />
 
-                <!-- Schedule button -->
                 <TextView
                     android:id="@+id/scheduleCh1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="⏰"
-                    android:textSize="14sp"
+                    android:textSize="17sp"
                     android:layout_marginTop="6dp"
                     android:clickable="true"
                     android:focusable="true"/>
@@ -206,7 +241,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="⏰"
-                    android:textSize="14sp"
+                    android:textSize="17sp"
                     android:layout_marginTop="6dp"
                     android:clickable="true"
                     android:focusable="true"/>
@@ -289,7 +324,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="⏰"
-                    android:textSize="14sp"
+                    android:textSize="17sp"
                     android:layout_marginTop="6dp"
                     android:clickable="true"
                     android:focusable="true"/>
@@ -365,7 +400,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="⏰"
-                    android:textSize="14sp"
+                    android:textSize="17sp"
                     android:layout_marginTop="6dp"
                     android:clickable="true"
                     android:focusable="true"/>
