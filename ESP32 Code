@@ -7,13 +7,14 @@
 #include <WebServer.h>
 #include <Preferences.h>
 #include <BlynkSimpleEsp32.h>
+#include <ArduinoOTA.h>
 
 #define RELAY1    26
 #define RELAY2    27
 #define RELAY3    12
 #define RELAY4    14
-#define BOOT_BTN   0   // Onboard BOOT button (GPIO0)
-#define LED_PIN    2   // Onboard blue LED (GPIO2)
+#define BOOT_BTN   0
+#define LED_PIN    2
 
 int relayPins[4] = {RELAY1, RELAY2, RELAY3, RELAY4};
 
@@ -27,19 +28,16 @@ bool relayStates[4]  = {false, false, false, false};
 bool apModeActive    = false;
 bool provisioning    = false;
 
-unsigned long lastFlash    = 0;
-unsigned long lastWiFiChk  = 0;
-unsigned long bootPressedAt = 0;   // when BOOT button was first pressed
+unsigned long lastFlash     = 0;
+unsigned long lastWiFiChk   = 0;
+unsigned long bootPressedAt = 0;
 bool          bootHolding   = false;
 
-// ─────────────────────────────────────────────
-//  LED HELPERS
-// ─────────────────────────────────────────────
+// ── ?LED ───────────────────────────────────────────────
 
 void ledOn()  { digitalWrite(LED_PIN, HIGH); }
 void ledOff() { digitalWrite(LED_PIN, LOW);  }
 
-// Blink n times (blocking — only called at mode transitions)
 void ledBlink(int n) {
     for (int i = 0; i < n; i++) {
         digitalWrite(LED_PIN, HIGH); delay(120);
@@ -47,9 +45,7 @@ void ledBlink(int n) {
     }
 }
 
-// ─────────────────────────────────────────────
-//  RELAY HELPERS
-// ─────────────────────────────────────────────
+// ── Relay ─────────────────────────────────────────────
 
 void initRelays() {
     for (int i = 0; i < 4; i++) {
@@ -86,9 +82,7 @@ void saveStatesToFlash() {
     preferences.end();
 }
 
-// ─────────────────────────────────────────────
-//  BLYNK HANDLERS
-// ─────────────────────────────────────────────
+// ── Blynk handlers ────────────────────────────────────
 
 BLYNK_WRITE(V0) { setRelay(1, param.asInt()); saveStatesToFlash(); }
 BLYNK_WRITE(V1) { setRelay(2, param.asInt()); saveStatesToFlash(); }
@@ -107,66 +101,50 @@ BLYNK_DISCONNECTED() {
     Serial.println("Blynk Disconnected — Local server still active");
 }
 
-// ─────────────────────────────────────────────
-//  AP MODE TRIGGER (called from loop)
-//  Hold BOOT button 3 sec during normal operation
-// ─────────────────────────────────────────────
+// ── AP Mode Trigger ───────────────────────────────────
+
+void startAPMode(const char* apName);
 
 void triggerAPMode() {
-    Serial.println("BOOT held 3s — Switching to AP mode...");
-
-    // 5 fast blinks = AP mode starting
+    Serial.println("AP mode triggered");
     ledBlink(5);
 
-    // Wipe credentials
     preferences.begin("sb", false);
     preferences.remove("ssid");
     preferences.remove("pass");
     preferences.remove("token");
     preferences.end();
 
-    // LED ON solid = AP mode active
     ledOn();
+    provisioning = true;
+    apModeActive = true;
 
-    provisioning  = true;
-    apModeActive  = true;
-
-    // Stop STA, start AP
     WiFi.disconnect(true);
     delay(200);
     startAPMode("SmartBulb-Setup");
-
-    Serial.println("AP Mode active — LED ON solid");
+    Serial.println("AP Mode active — LED ON");
 }
 
-// ─────────────────────────────────────────────
-//  LOCAL WEB SERVER ROUTES
-// ─────────────────────────────────────────────
+// ── Server Routes ─────────────────────────────────────
 
 void setupServerRoutes() {
 
-    // GET /ping
     server.on("/ping", HTTP_GET, []() {
-        String ip   = apModeActive ? WiFi.softAPIP().toString() : WiFi.localIP().toString();
+        String ip   = apModeActive ? WiFi.softAPIP().toString()
+                                   : WiFi.localIP().toString();
         String json = "{\"device\":\"SmartBulb\",\"ip\":\"" + ip + "\"}";
         server.send(200, "application/json", json);
     });
 
-    // GET /relay?pin=1&value=1
     server.on("/relay", HTTP_GET, []() {
-        String pinArg   = server.arg("pin");
-        String valueArg = server.arg("value");
+        int pin   = server.arg("pin").toInt();
+        int value = server.arg("value").toInt();
 
-        Serial.printf("/relay called: pin=%s value=%s\n",
-                      pinArg.c_str(), valueArg.c_str());
-
-        int pin   = pinArg.toInt();
-        int value = valueArg.toInt();
+        Serial.printf("/relay: pin=%d value=%d\n", pin, value);
 
         if (pin >= 1 && pin <= 4) {
             setRelay(pin, value == 1);
             saveStatesToFlash();
-
             if (!provisioning && Blynk.connected()) {
                 Blynk.virtualWrite(V0 + (pin - 1), relayStates[pin - 1]);
             }
@@ -176,7 +154,6 @@ void setupServerRoutes() {
         }
     });
 
-    // GET /status
     server.on("/status", HTTP_GET, []() {
         String json = "{\"s1\":"  + String(relayStates[0]) +
                       ",\"s2\":" + String(relayStates[1]) +
@@ -188,14 +165,13 @@ void setupServerRoutes() {
         server.send(200, "application/json", json);
     });
 
-    // GET /setup?ssid=...&pass=...&token=...
     server.on("/setup", HTTP_GET, []() {
         String ssid  = server.arg("ssid");
         String pass  = server.arg("pass");
         String token = server.arg("token");
 
         if (ssid.isEmpty() || token.isEmpty()) {
-            server.send(400, "text/plain", "Missing params: ssid and token required");
+            server.send(400, "text/plain", "Missing ssid and token");
             return;
         }
 
@@ -205,17 +181,20 @@ void setupServerRoutes() {
         preferences.putString("token", token);
         preferences.end();
 
-        // LED off before restart
         ledOff();
-
         server.send(200, "text/plain", "OK — Restarting...");
         delay(300);
         ESP.restart();
     });
 
-    // GET /reset — software factory reset
+    server.on("/ap", HTTP_GET, []() {
+        server.send(200, "text/plain", "Switching to AP mode...");
+        delay(300);
+        triggerAPMode();
+    });
+
     server.on("/reset", HTTP_GET, []() {
-        server.send(200, "text/plain", "Factory Reset — Restarting into AP mode...");
+        server.send(200, "text/plain", "Factory Reset — Restarting...");
         delay(300);
         preferences.begin("sb", false);
         preferences.clear();
@@ -224,9 +203,7 @@ void setupServerRoutes() {
     });
 }
 
-// ─────────────────────────────────────────────
-//  AP MODE START
-// ─────────────────────────────────────────────
+// ── AP Mode Start ─────────────────────────────────────
 
 void startAPMode(const char* apName) {
     WiFi.softAP(apName, "12345678");
@@ -234,13 +211,45 @@ void startAPMode(const char* apName) {
     server.stop();
     setupServerRoutes();
     server.begin();
-    Serial.println("AP Mode: " + String(apName) + " -> 192.168.4.1");
-    Serial.println("http://192.168.4.1/setup?ssid=YourWiFi&pass=YourPass&token=YourToken");
+    Serial.println("AP: " + String(apName) + " → 192.168.4.1");
 }
 
-// ─────────────────────────────────────────────
-//  BLYNK TASK (Core 0)
-// ─────────────────────────────────────────────
+// ── OTA Setup ─────────────────────────────────────────
+
+void setupOTA() {
+    ArduinoOTA.setHostname("smartbulb-relay");
+    ArduinoOTA.setPassword("samad1234");
+
+    ArduinoOTA.onStart([]() {
+        String type = ArduinoOTA.getCommand() == U_FLASH ? "firmware" : "filesystem";
+        Serial.println("OTA Start: " + type);
+        saveStatesToFlash(); // Save states before update
+    });
+
+    ArduinoOTA.onEnd([]() {
+        Serial.println("OTA Done!");
+        ledBlink(3);
+    });
+
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+        Serial.printf("OTA Progress: %u%%\n", (progress / (total / 100)));
+    });
+
+    ArduinoOTA.onError([](ota_error_t error) {
+        Serial.printf("OTA Error[%u]: ", error);
+        if      (error == OTA_AUTH_ERROR)    Serial.println("Auth Failed");
+        else if (error == OTA_BEGIN_ERROR)   Serial.println("Begin Failed");
+        else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+        else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+        else if (error == OTA_END_ERROR)     Serial.println("End Failed");
+    });
+
+    ArduinoOTA.begin();
+    Serial.println("OTA ready — hostname: smartbulb-relay");
+    Serial.println("OTA password: samad1234");
+}
+
+// ── Blynk Task (Core 0) ───────────────────────────────
 
 void blynkTask(void* pvParameters) {
     if (!provisioning) {
@@ -248,22 +257,17 @@ void blynkTask(void* pvParameters) {
         Blynk.connect();
     }
     while (true) {
-        if (!provisioning) {
-            Blynk.run();
-        }
+        if (!provisioning) Blynk.run();
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
 
-// ─────────────────────────────────────────────
-//  SETUP
-// ─────────────────────────────────────────────
+// ── Setup ─────────────────────────────────────────────
 
 void setup() {
     Serial.begin(115200);
     delay(200);
 
-    // LED init
     pinMode(LED_PIN,  OUTPUT);
     pinMode(BOOT_BTN, INPUT_PULLUP);
     ledOff();
@@ -271,19 +275,17 @@ void setup() {
     initRelays();
     restoreStates();
 
-    // Load saved credentials
     preferences.begin("sb", true);
     String sSSID  = preferences.getString("ssid",  "");
     String sPass  = preferences.getString("pass",  "");
     String sToken = preferences.getString("token", "");
     preferences.end();
 
-    // No credentials — provisioning mode
     if (sSSID.isEmpty() || sToken.isEmpty()) {
         provisioning = true;
-        ledOn();   // LED ON = AP mode
+        ledOn();
         startAPMode("SmartBulb-Setup");
-        Serial.println("Provisioning mode active — LED ON");
+        Serial.println("Provisioning mode — LED ON");
         xTaskCreatePinnedToCore(blynkTask, "BlynkTask", 8192, NULL, 1, NULL, 0);
         return;
     }
@@ -292,7 +294,7 @@ void setup() {
     sPass.toCharArray(wifiPass,   64);
     sToken.toCharArray(authToken, 64);
 
-    Serial.println("Connecting to WiFi: " + sSSID);
+    Serial.println("Connecting to: " + sSSID);
 
     WiFi.mode(WIFI_STA);
     WiFi.setAutoReconnect(true);
@@ -307,78 +309,66 @@ void setup() {
     }
 
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("\nWiFi failed — Starting AP mode");
-        provisioning = true;
-        ledOn();   // LED ON = AP mode
-        startAPMode("SmartBulb-Setup");
-        xTaskCreatePinnedToCore(blynkTask, "BlynkTask", 8192, NULL, 1, NULL, 0);
-        return;
+        Serial.println("\nWiFi failed — Restarting in 10s...");
+        delay(10000);
+        ESP.restart();
     }
 
     Serial.println("\nWiFi Connected!");
     Serial.println("Local IP: " + WiFi.localIP().toString());
-    ledOff();   // LED OFF = normal mode
+    ledOff();
 
+    setupOTA();         // OTA init
     setupServerRoutes();
     server.begin();
     Serial.println("Local server ready");
 
     Blynk.config(authToken, "blynk.cloud", 80);
-    Serial.println("Blynk configured — connecting in background...");
+    Serial.println("Blynk configured");
 
     xTaskCreatePinnedToCore(blynkTask, "BlynkTask", 8192, NULL, 1, NULL, 0);
 }
 
-// ─────────────────────────────────────────────
-//  LOOP (Core 1)
-// ─────────────────────────────────────────────
+// ── Loop (Core 1) ─────────────────────────────────────
 
 void loop() {
     server.handleClient();
 
+    if (!provisioning && WiFi.status() == WL_CONNECTED) {
+        ArduinoOTA.handle();
+    }
+
     unsigned long now = millis();
 
-    // ── BOOT BUTTON: 3 sec hold = AP mode ──────
-    // Only check in normal (non-provisioning) mode
     if (!provisioning) {
         bool btnPressed = (digitalRead(BOOT_BTN) == LOW);
 
         if (btnPressed && !bootHolding) {
-            // Button just pressed — start timer
             bootHolding   = true;
             bootPressedAt = now;
-            Serial.println("BOOT pressed — hold 3s for AP mode...");
-        }
-        else if (!btnPressed && bootHolding) {
-            // Released before 3s
+            Serial.println("BOOT pressed — hold 3s for AP mode");
+        } else if (!btnPressed && bootHolding) {
             bootHolding = false;
             Serial.println("BOOT released early — cancelled");
-        }
-        else if (btnPressed && bootHolding) {
-            // Still holding — check if 3 sec passed
+        } else if (btnPressed && bootHolding) {
             if (now - bootPressedAt >= 3000) {
                 bootHolding = false;
-                triggerAPMode();   // ← Switch to AP mode
+                triggerAPMode();
             }
         }
     }
-    // ───────────────────────────────────────────
 
-    // Periodic flash save every 60 seconds
     if (now - lastFlash > 60000) {
         lastFlash = now;
         saveStatesToFlash();
     }
 
-    // WiFi watchdog every 10 seconds
     if (!provisioning && now - lastWiFiChk > 10000) {
         lastWiFiChk = now;
         if (WiFi.status() != WL_CONNECTED) {
-            Serial.println("WiFi lost — reconnecting...");
+            Serial.println("WiFi lost — reconnecting");
             WiFi.disconnect();
             WiFi.begin(wifiSSID, wifiPass);
-        } else if (!Blynk.connected()) {
-            Serial.println("WiFi OK — Blynk offline, local server active");
         }
     }
 }
