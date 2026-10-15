@@ -8,6 +8,7 @@
 #include <Preferences.h>
 #include <BlynkSimpleEsp32.h>
 #include <ArduinoOTA.h>
+#include <esp_now.h>
 
 #define RELAY1    26
 #define RELAY2    27
@@ -33,7 +34,15 @@ unsigned long lastWiFiChk   = 0;
 unsigned long bootPressedAt = 0;
 bool          bootHolding   = false;
 
-// ── ?LED ───────────────────────────────────────────────
+// ── ESP-NOW (remote se aane wale toggle) ──────────────
+typedef struct struct_message {
+    uint8_t relayNum;
+} struct_message;
+
+volatile uint8_t pendingToggle = 0;   // 0 = kuch nahi, 1-4 = us relay ko toggle karo
+volatile bool    blynkDirty    = false;
+
+// ── LED ───────────────────────────────────────────────
 
 void ledOn()  { digitalWrite(LED_PIN, HIGH); }
 void ledOff() { digitalWrite(LED_PIN, LOW);  }
@@ -80,6 +89,37 @@ void saveStatesToFlash() {
         preferences.putBool(("s" + String(i + 1)).c_str(), relayStates[i]);
     }
     preferences.end();
+}
+
+// ── ESP-NOW receive ───────────────────────────────────
+
+void handleEspNowData(const uint8_t *data, int len) {
+    if (len != sizeof(struct_message)) return;
+    struct_message msg;
+    memcpy(&msg, data, sizeof(msg));
+    if (msg.relayNum >= 1 && msg.relayNum <= 4) {
+        pendingToggle = msg.relayNum;   // loop() mein process hoga
+    }
+}
+
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+void onEspNowRecv(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
+    handleEspNowData(data, len);
+}
+#else
+void onEspNowRecv(const uint8_t *mac, const uint8_t *data, int len) {
+    handleEspNowData(data, len);
+}
+#endif
+
+void initEspNow() {
+    if (esp_now_init() != ESP_OK) {
+        Serial.println("ESP-NOW init failed");
+        return;
+    }
+    esp_now_register_recv_cb(onEspNowRecv);
+    Serial.println("ESP-NOW receiver ready");
+    Serial.println("This board MAC: " + WiFi.macAddress());
 }
 
 // ── Blynk handlers ────────────────────────────────────
@@ -257,7 +297,18 @@ void blynkTask(void* pvParameters) {
         Blynk.connect();
     }
     while (true) {
-        if (!provisioning) Blynk.run();
+        if (!provisioning) {
+            Blynk.run();
+
+            // Remote (ESP-NOW) se toggle hua ho to app ko bhi sync karo
+            if (blynkDirty && Blynk.connected()) {
+                blynkDirty = false;
+                Blynk.virtualWrite(V0, relayStates[0]);
+                Blynk.virtualWrite(V1, relayStates[1]);
+                Blynk.virtualWrite(V2, relayStates[2]);
+                Blynk.virtualWrite(V3, relayStates[3]);
+            }
+        }
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
@@ -316,9 +367,13 @@ void setup() {
 
     Serial.println("\nWiFi Connected!");
     Serial.println("Local IP: " + WiFi.localIP().toString());
+    Serial.printf("WiFi channel: %d\n", WiFi.channel());
     ledOff();
 
-    setupOTA();         // OTA init
+    WiFi.setSleep(false);   // ESP-NOW packets miss na hon
+    initEspNow();           // WiFi STA connect hone ke BAAD
+
+    setupOTA();
     setupServerRoutes();
     server.begin();
     Serial.println("Local server ready");
@@ -336,6 +391,16 @@ void loop() {
 
     if (!provisioning && WiFi.status() == WL_CONNECTED) {
         ArduinoOTA.handle();
+    }
+
+    // Remote button se aaya toggle
+    if (pendingToggle != 0) {
+        uint8_t ch = pendingToggle;
+        pendingToggle = 0;
+        setRelay(ch, !relayStates[ch - 1]);
+        saveStatesToFlash();
+        blynkDirty = true;
+        Serial.printf("Remote toggle -> relay %d\n", ch);
     }
 
     unsigned long now = millis();
