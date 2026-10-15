@@ -1,0 +1,489 @@
+/*
+  ============================================================
+   ESP32-CAM + TM1637 WiFi Clock  +  4 Relay Control Buttons
+  ============================================================
+  GPIO13 button:
+     1 click  = resync time
+     2 clicks = toggle 12-hour / 24-hour format   (NEW)
+     3 clicks = WiFi setup portal
+     long press = manual time set
+
+  TM1637 on GPIO14 (CLK) / GPIO15 (DIO)
+
+  4 extra buttons control the 4 relays on the separate
+  SmartBulb ESP32 board over ESP-NOW (wireless, no wiring
+  between the two boards needed).
+
+     Relay1 button -> GPIO0
+     Relay2 button -> GPIO2
+     Relay3 button -> GPIO12
+     Relay4 button -> GPIO16
+
+  Wiring: each button one leg to the GPIO, other leg to GND
+  (same as the existing GPIO13 button). Internal pull-ups are
+  used, so no external resistor needed.
+
+  MAC address of the SmartBulb relay board is already filled
+  in below (RELAY_BOARD_MAC).
+
+  WiFi: after NTP sync, WiFi is disconnected from the router
+  but WiFi.mode stays STA (radio stays alive for ESP-NOW).
+  ============================================================
+*/
+
+#include <WiFi.h>
+#include <WiFiManager.h>
+#include <TM1637Display.h>
+#include <time.h>
+#include <esp_now.h>
+#include <ArduinoOTA.h>
+
+// ---------------- USER SETTINGS ----------------
+#define CLK_PIN        14
+#define DIO_PIN        15
+#define BUTTON_PIN     13
+
+// Relay control buttons
+#define RELAY_BTN1     0
+#define RELAY_BTN2     2
+#define RELAY_BTN3     12
+#define RELAY_BTN4     16
+
+const long GMT_OFFSET_SEC      = 5 * 3600 + 30 * 60;  // IST = UTC+5:30
+const int  DAYLIGHT_OFFSET_SEC = 0;
+
+const char* NTP_SERVER_1 = "pool.ntp.org";
+const char* NTP_SERVER_2 = "time.google.com";
+
+const unsigned long TRIPLE_PRESS_WINDOW_MS = 1200;
+const unsigned long LONG_PRESS_MS          = 1500;
+const unsigned long SET_MODE_TIMEOUT_MS    = 3000;
+const unsigned long OTA_WINDOW_MS          = 20000;
+
+// MAC address of the SmartBulb relay board (esp32-B7545C)
+uint8_t RELAY_BOARD_MAC[6] = {0x78, 0x1C, 0x3C, 0xB7, 0x54, 0x5C};
+// --------------------------------------------------
+
+TM1637Display display(CLK_PIN, DIO_PIN);
+WiFiManager wm;
+
+// ---------------- Custom "HELO" segments ----------------
+const uint8_t SEG_H = SEG_F | SEG_E | SEG_G | SEG_B | SEG_C;
+const uint8_t SEG_E_LETTER = SEG_A | SEG_F | SEG_G | SEG_E | SEG_D;
+const uint8_t SEG_L = SEG_F | SEG_E | SEG_D;
+const uint8_t SEG_O = SEG_A | SEG_B | SEG_C | SEG_D | SEG_E | SEG_F;
+
+// ---------------- Unified internal clock (millis based) ----------------
+unsigned long baseMillis = 0;
+int baseHour = 0, baseMinute = 0, baseSecond = 0;
+bool timeIsValid = false;
+
+// NEW: 12h/24h format toggle
+bool use12HourFormat = false;   // false = 24h (default), true = 12h
+
+void setInternalTime(int h, int m, int s) {
+  baseHour = h; baseMinute = m; baseSecond = s;
+  baseMillis = millis();
+  timeIsValid = true;
+}
+
+void getCurrentTime(int &h, int &m, int &s) {
+  unsigned long elapsedSec = (millis() - baseMillis) / 1000;
+  unsigned long totalSec = (unsigned long)baseHour * 3600 + baseMinute * 60 + baseSecond + elapsedSec;
+  totalSec %= 86400;
+  h = totalSec / 3600;
+  m = (totalSec % 3600) / 60;
+  s = totalSec % 60;
+}
+
+// ---------------- Manual set mode state ----------------
+enum ClockMode { NORMAL_MODE, SET_HOUR_MODE, SET_MINUTE_MODE };
+ClockMode currentMode = NORMAL_MODE;
+int editHour = 0, editMinute = 0;
+unsigned long lastEditActionTime = 0;
+
+// ---------------- Clock button state machine ----------------
+bool buttonDown = false;
+unsigned long pressStartTime = 0;
+bool rawLastReading = HIGH;
+unsigned long lastDebounceTime = 0;
+const unsigned long DEBOUNCE_MS = 40;
+
+int shortClickCount = 0;
+unsigned long firstShortClickTime = 0;
+
+// ---------------- Relay buttons state ----------------
+struct RelayButton {
+  uint8_t pin;
+  uint8_t relayNum;
+  bool    stableState;
+  bool    lastReading;
+  unsigned long lastDebounce;
+};
+
+RelayButton relayButtons[4] = {
+  { RELAY_BTN1, 1, HIGH, HIGH, 0 },
+  { RELAY_BTN2, 2, HIGH, HIGH, 0 },
+  { RELAY_BTN3, 3, HIGH, HIGH, 0 },
+  { RELAY_BTN4, 4, HIGH, HIGH, 0 },
+};
+
+typedef struct struct_message {
+  uint8_t relayNum;
+} struct_message;
+
+// ---------------- Function declarations ----------------
+void connectWifiAndSyncTime();
+void openWifiSetupPortal();
+void updateDisplay();
+void showBusySymbol();
+void showHeloMessage();
+void handleButton();
+void enterManualSetMode();
+void cancelManualSetMode();
+void advanceManualSetMode();
+void initEspNow();
+void handleRelayButtons();
+void sendRelayToggle(uint8_t relayNum);
+void runOtaWindow();
+void toggleTimeFormat();          // NEW
+
+// =========================================================
+void setup() {
+  Serial.begin(115200);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+  for (int i = 0; i < 4; i++) {
+    pinMode(relayButtons[i].pin, INPUT_PULLUP);
+  }
+
+  display.setBrightness(5);
+  display.showNumberDecEx(0, 0, true);
+
+  connectWifiAndSyncTime();
+  initEspNow();
+}
+
+// =========================================================
+void loop() {
+  handleButton();
+  handleRelayButtons();
+
+  if (currentMode != NORMAL_MODE && (millis() - lastEditActionTime > SET_MODE_TIMEOUT_MS)) {
+    advanceManualSetMode();
+  }
+
+  static unsigned long lastDisplayUpdate = 0;
+  unsigned long refreshRate = (currentMode == NORMAL_MODE) ? 1000 : 300;
+  if (millis() - lastDisplayUpdate >= refreshRate) {
+    lastDisplayUpdate = millis();
+    updateDisplay();
+  }
+}
+
+// =========================================================
+// NEW: toggle 12h/24h format, show brief confirmation
+// =========================================================
+void toggleTimeFormat() {
+  use12HourFormat = !use12HourFormat;
+  Serial.printf("Time format switched to: %s\n", use12HourFormat ? "12-hour" : "24-hour");
+
+  // Brief on-screen confirmation: shows "12" or "24" for ~800ms
+  display.showNumberDecEx(use12HourFormat ? 12 : 24, 0, false);
+  delay(800);
+}
+
+// =========================================================
+// ESP-NOW setup — must run after WiFi.mode(WIFI_STA)
+// =========================================================
+void initEspNow() {
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("ESP-NOW init failed");
+    return;
+  }
+
+  esp_now_peer_info_t peerInfo = {};
+  memcpy(peerInfo.peer_addr, RELAY_BOARD_MAC, 6);
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+    Serial.println("ESP-NOW: failed to add relay board as peer");
+    return;
+  }
+  Serial.println("ESP-NOW sender ready");
+}
+
+void sendRelayToggle(uint8_t relayNum) {
+  struct_message msg;
+  msg.relayNum = relayNum;
+  esp_err_t result = esp_now_send(RELAY_BOARD_MAC, (uint8_t*)&msg, sizeof(msg));
+  if (result == ESP_OK) {
+    Serial.printf("Sent toggle for relay %d\n", relayNum);
+  } else {
+    Serial.printf("Send FAILED for relay %d (channel mismatch or board off?)\n", relayNum);
+  }
+}
+
+// =========================================================
+void handleRelayButtons() {
+  for (int i = 0; i < 4; i++) {
+    RelayButton &b = relayButtons[i];
+    bool reading = digitalRead(b.pin);
+
+    if (reading != b.lastReading) {
+      b.lastDebounce = millis();
+    }
+    b.lastReading = reading;
+
+    if (millis() - b.lastDebounce < DEBOUNCE_MS) continue;
+
+    if (reading != b.stableState) {
+      b.stableState = reading;
+      if (b.stableState == LOW) {
+        sendRelayToggle(b.relayNum);
+      }
+    }
+  }
+}
+
+// =========================================================
+void connectWifiAndSyncTime() {
+  showBusySymbol();
+
+  WiFi.mode(WIFI_STA);
+  wm.setConnectTimeout(15);
+  wm.setEnableConfigPortal(false);
+
+  bool connected = wm.autoConnect();
+
+  if (connected) {
+    Serial.println("WiFi connected: " + WiFi.SSID());
+    showHeloMessage();
+
+    configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER_1, NTP_SERVER_2);
+
+    struct tm timeinfo;
+    unsigned long start = millis();
+    bool gotTime = false;
+    while (millis() - start < 8000) {
+      if (getLocalTime(&timeinfo, 500)) { gotTime = true; break; }
+    }
+
+    if (gotTime) {
+      setInternalTime(timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+      Serial.println("Time synced via NTP!");
+    } else {
+      Serial.println("NTP se time nahi mila.");
+    }
+
+    runOtaWindow();
+  } else {
+    Serial.println("WiFi connect fail/timeout. Manual set button se time set kar sakte ho (long press).");
+  }
+
+  WiFi.disconnect(false);
+}
+
+// =========================================================
+void runOtaWindow() {
+  ArduinoOTA.setHostname("esp32cam-clock");
+  // ArduinoOTA.setPassword("yourpassword");
+  ArduinoOTA.begin();
+
+  Serial.println("OTA window open (20 sec) — upload wirelessly now if needed");
+  showBusySymbol();
+
+  unsigned long start = millis();
+  while (millis() - start < OTA_WINDOW_MS) {
+    ArduinoOTA.handle();
+    delay(10);
+  }
+
+  Serial.println("OTA window closed");
+}
+
+// =========================================================
+void openWifiSetupPortal() {
+  showBusySymbol();
+  Serial.println("Opening WiFi setup portal (AP mode)...");
+
+  WiFi.mode(WIFI_STA);
+  wm.setConfigPortalTimeout(180);
+  bool ok = wm.startConfigPortal("ESP32-Clock-Setup");
+
+  if (ok) {
+    Serial.println("Naya WiFi saved & connected!");
+    showHeloMessage();
+
+    configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER_1, NTP_SERVER_2);
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo, 5000)) {
+      setInternalTime(timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+    }
+  } else {
+    Serial.println("Setup portal timeout/fail.");
+  }
+
+  WiFi.disconnect(false);
+}
+
+// =========================================================
+// NEW: hour formatting respects use12HourFormat
+// =========================================================
+void updateDisplay() {
+  if (currentMode == NORMAL_MODE) {
+    if (!timeIsValid) {
+      display.showNumberDecEx(0, 0, true);
+      return;
+    }
+    int h, m, s;
+    getCurrentTime(h, m, s);
+
+    int displayHour = h;
+    if (use12HourFormat) {
+      displayHour = h % 12;
+      if (displayHour == 0) displayHour = 12;
+    }
+
+    int value = displayHour * 100 + m;
+    uint8_t colonMask = (s % 2 == 0) ? 0b01000000 : 0;
+    display.showNumberDecEx(value, colonMask, true);
+    return;
+  }
+
+  static bool blinkOn = true;
+  blinkOn = !blinkOn;
+
+  uint8_t segs[4] = {0, 0, 0, 0};
+  int hh = editHour, mm = editMinute;
+  uint8_t digits[4] = {
+    display.encodeDigit(hh / 10),
+    display.encodeDigit(hh % 10),
+    display.encodeDigit(mm / 10),
+    display.encodeDigit(mm % 10)
+  };
+  digits[1] |= 0b01000000;
+
+  if (currentMode == SET_HOUR_MODE) {
+    segs[0] = blinkOn ? digits[0] : 0;
+    segs[1] = blinkOn ? digits[1] : 0b01000000;
+    segs[2] = digits[2];
+    segs[3] = digits[3];
+  } else {
+    segs[0] = digits[0];
+    segs[1] = digits[1];
+    segs[2] = blinkOn ? digits[2] : 0;
+    segs[3] = blinkOn ? digits[3] : 0;
+  }
+
+  display.setSegments(segs);
+}
+
+void showBusySymbol() {
+  uint8_t dashes[] = { SEG_G, SEG_G, SEG_G, SEG_G };
+  display.setSegments(dashes);
+}
+
+void showHeloMessage() {
+  uint8_t helo[] = { SEG_H, SEG_E_LETTER, SEG_L, SEG_O };
+  display.setSegments(helo);
+  delay(1000);
+}
+
+// =========================================================
+void enterManualSetMode() {
+  int h, m, s;
+  if (timeIsValid) getCurrentTime(h, m, s);
+  else { h = 0; m = 0; }
+
+  editHour = h;
+  editMinute = m;
+  currentMode = SET_HOUR_MODE;
+  lastEditActionTime = millis();
+  Serial.println("Manual set mode: HOUR set karo (click se +1)");
+}
+
+void cancelManualSetMode() {
+  currentMode = NORMAL_MODE;
+  Serial.println("Manual set mode cancelled.");
+}
+
+void advanceManualSetMode() {
+  if (currentMode == SET_HOUR_MODE) {
+    currentMode = SET_MINUTE_MODE;
+    lastEditActionTime = millis();
+    Serial.println("Manual set mode: MINUTE set karo (click se +1)");
+  } else if (currentMode == SET_MINUTE_MODE) {
+    setInternalTime(editHour, editMinute, 0);
+    currentMode = NORMAL_MODE;
+    Serial.printf("Manual time saved: %02d:%02d\n", editHour, editMinute);
+  }
+}
+
+// =========================================================
+// NEW: click counting now distinguishes 1 / 2 / 3+ clicks
+// =========================================================
+void handleButton() {
+  bool reading = digitalRead(BUTTON_PIN);
+
+  if (reading != rawLastReading) {
+    lastDebounceTime = millis();
+  }
+  rawLastReading = reading;
+
+  if (millis() - lastDebounceTime < DEBOUNCE_MS) return;
+
+  static bool stableState = HIGH;
+  if (reading != stableState) {
+    stableState = reading;
+
+    if (stableState == LOW) {
+      buttonDown = true;
+      pressStartTime = millis();
+    } else {
+      if (buttonDown) {
+        unsigned long heldFor = millis() - pressStartTime;
+        buttonDown = false;
+
+        if (heldFor >= LONG_PRESS_MS) {
+          if (currentMode == NORMAL_MODE) {
+            enterManualSetMode();
+          } else {
+            cancelManualSetMode();
+          }
+          shortClickCount = 0;
+        } else {
+          if (currentMode != NORMAL_MODE) {
+            if (currentMode == SET_HOUR_MODE) editHour = (editHour + 1) % 24;
+            else if (currentMode == SET_MINUTE_MODE) editMinute = (editMinute + 1) % 60;
+            lastEditActionTime = millis();
+          } else {
+            unsigned long now = millis();
+            if (shortClickCount == 0 || (now - firstShortClickTime > TRIPLE_PRESS_WINDOW_MS)) {
+              firstShortClickTime = now;
+              shortClickCount = 1;
+            } else {
+              shortClickCount++;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (currentMode == NORMAL_MODE && shortClickCount > 0 &&
+      (millis() - firstShortClickTime > TRIPLE_PRESS_WINDOW_MS)) {
+    if (shortClickCount >= 3) {
+      Serial.println("Triple click -> WiFi setup portal");
+      openWifiSetupPortal();
+    } else if (shortClickCount == 2) {
+      Serial.println("Double click -> toggle 12h/24h format");
+      toggleTimeFormat();
+    } else if (shortClickCount == 1) {
+      Serial.println("Single click -> manual NTP resync");
+      connectWifiAndSyncTime();
+    }
+    shortClickCount = 0;
+  }
+}
